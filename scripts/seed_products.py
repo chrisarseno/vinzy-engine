@@ -22,13 +22,13 @@ from vinzy_engine.licensing.tier_templates import PRODUCT_SEEDS, resolve_tier_fe
 
 async def seed_products() -> None:
     settings = get_settings()
-    db = DatabaseManager(settings.db_url)
+    db = DatabaseManager(settings)
     await db.init()
     await db.create_all()
 
     svc = LicensingService(settings)
 
-    async with db.get_session("licensing") as session:
+    async with db.get_session() as session:
         for seed in PRODUCT_SEEDS:
             existing = await svc.get_product_by_code(session, seed["code"])
             if existing:
