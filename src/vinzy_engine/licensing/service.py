@@ -186,9 +186,9 @@ class LicensingService:
         session.add(license_obj)
         await session.flush()
 
-        # Create entitlement rows from merged product+license entitlements
+        # Create entitlement rows from tier-resolved features
         resolved = resolve_entitlements(
-            product.features or {}, license_obj.entitlements or {}
+            effective_features, license_obj.entitlements or {}
         )
         for ent in resolved:
             session.add(EntitlementModel(
@@ -378,15 +378,19 @@ class LicensingService:
         product_code = product.code if product else ""
         product_features = product.features if product else {}
 
+        # Use license-level features as the base when present (tier templates
+        # populate these with the correct subset). Fall back to product features.
+        base_features = license_obj.features if license_obj.features else product_features
+
         # Resolve entitlements
         resolved = resolve_entitlements(
-            product_features, license_obj.entitlements or {}
+            base_features, license_obj.entitlements or {}
         )
         feature_names = [e["feature"] for e in resolved if e["enabled"]]
 
         # Resolve agent entitlements
         agent_ents = resolve_agent_entitlements(
-            product_features, license_obj.entitlements or {}
+            base_features, license_obj.entitlements or {}
         )
         agents_list = [
             {
