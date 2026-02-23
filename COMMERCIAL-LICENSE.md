@@ -40,4 +40,4 @@ For commercial licensing inquiries, contact:
 
 ## Copyright
 
-Copyright (c) 2025-2026 Chris Arseno / 1450 Enterprises LLC. All rights reserved.
+Copyright (c) 2025-2026 Chris Arsenault / 1450 Enterprises LLC. All rights reserved.

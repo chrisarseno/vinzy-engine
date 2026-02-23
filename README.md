@@ -171,4 +171,4 @@ This project is dual-licensed:
 - **AGPL-3.0** — free for open-source use. See [LICENSE](LICENSE).
 - **Commercial License** — for proprietary use without AGPL obligations. See [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
-Copyright (c) 2025-2026 Chris Arseno / 1450 Enterprises LLC.
+Copyright (c) 2025-2026 Chris Arsenault / 1450 Enterprises LLC.
