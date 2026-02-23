@@ -18,6 +18,10 @@ from vinzy_engine.keygen.lease import LeasePayload, create_lease
 from vinzy_engine.keygen.validator import validate_key, validate_key_multi
 from vinzy_engine.licensing.agent_entitlements import resolve_agent_entitlements
 from vinzy_engine.licensing.entitlements import resolve_entitlements
+from vinzy_engine.licensing.tier_templates import (
+    get_machines_limit,
+    resolve_tier_features,
+)
 from vinzy_engine.licensing.models import (
     CustomerModel,
     EntitlementModel,
@@ -122,14 +126,19 @@ class LicensingService:
         product_code: str,
         customer_id: str,
         tier: str = "standard",
-        machines_limit: int = 3,
+        machines_limit: int | None = None,
         days_valid: int = 365,
         features: dict | None = None,
         entitlements: dict | None = None,
         metadata: dict | None = None,
         tenant_id: str | None = None,
     ) -> tuple[LicenseModel, str]:
-        """Create a license and generate its key. Returns (model, raw_key)."""
+        """Create a license and generate its key. Returns (model, raw_key).
+
+        When tier is 'community', 'pro', or 'enterprise', the tier template
+        features are auto-applied and merged with any explicit overrides.
+        machines_limit defaults from the tier template if not specified.
+        """
         product = await self.get_product_by_code(session, product_code, tenant_id=tenant_id)
         if product is None:
             raise LicenseNotFoundError(f"Product '{product_code}' not found")
@@ -143,6 +152,23 @@ class LicensingService:
 
         expires_at = datetime.now(timezone.utc) + timedelta(days=days_valid)
 
+        # Auto-apply tier template features when tier is recognized
+        effective_features = {}
+        try:
+            template_features = resolve_tier_features(product_code, tier)
+            effective_features.update(template_features)
+        except ValueError:
+            pass  # Unknown tier — skip template, use explicit features only
+        if features:
+            effective_features.update(features)
+
+        # Default machines_limit from tier if not explicitly provided
+        if machines_limit is None:
+            try:
+                machines_limit = get_machines_limit(tier)
+            except (ValueError, KeyError):
+                machines_limit = 3
+
         license_obj = LicenseModel(
             key_hash=hashed,
             status="active",
@@ -153,7 +179,7 @@ class LicensingService:
             machines_limit=machines_limit,
             machines_used=0,
             expires_at=expires_at,
-            features=features or {},
+            features=effective_features,
             entitlements=entitlements or {},
             metadata_=metadata or {},
         )
