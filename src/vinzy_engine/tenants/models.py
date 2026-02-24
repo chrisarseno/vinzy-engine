@@ -17,3 +17,4 @@ class TenantModel(Base, TimestampMixin):
     )
     hmac_key_version: Mapped[int] = mapped_column(Integer, default=0)
     config_overrides: Mapped[dict] = mapped_column(JSON, default=dict)
+    zuultimate_tenant_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)

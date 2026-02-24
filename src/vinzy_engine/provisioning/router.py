@@ -92,6 +92,7 @@ async def _get_provisioning_service():
     from vinzy_engine.deps import get_db, get_licensing_service
     from vinzy_engine.provisioning.service import ProvisioningService
     from vinzy_engine.provisioning.email_delivery import EmailSender
+    from vinzy_engine.provisioning.zuultimate_client import ZuultimateClient
 
     settings = get_settings()
     email_provider = os.environ.get("VINZY_EMAIL_PROVIDER", "")
@@ -104,10 +105,18 @@ async def _get_provisioning_service():
             api_key=email_api_key,
         )
 
+    zuul_client = None
+    if settings.zuultimate_base_url and settings.zuultimate_service_token:
+        zuul_client = ZuultimateClient(
+            base_url=settings.zuultimate_base_url,
+            service_token=settings.zuultimate_service_token,
+        )
+
     return ProvisioningService(
         settings=settings,
         licensing_service=get_licensing_service(),
         email_sender=email_sender,
+        zuultimate_client=zuul_client,
     ), get_db()
 
 

@@ -52,6 +52,10 @@ class VinzySettings(BaseSettings):
     default_page_size: int = 20
     max_page_size: int = 100
 
+    # Zuultimate integration
+    zuultimate_base_url: str = ""
+    zuultimate_service_token: str = ""
+
     @property
     def hmac_keyring(self) -> dict[int, str]:
         """Return HMAC keyring as {version_int: key_str}.
