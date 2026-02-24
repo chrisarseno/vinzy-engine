@@ -50,6 +50,7 @@ def create_app() -> FastAPI:
     from vinzy_engine.anomaly.router import router as anomaly_router
     from vinzy_engine.webhooks.router import router as webhook_router
     from vinzy_engine.provisioning.router import router as provisioning_router
+    from vinzy_engine.provisioning.router import checkout_router
 
     prefix = settings.api_prefix
     app.include_router(licensing_router, prefix=prefix, tags=["licensing"])
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(anomaly_router, prefix=prefix, tags=["anomaly"])
     app.include_router(webhook_router, prefix=prefix, tags=["webhooks"])
     app.include_router(provisioning_router, prefix=prefix, tags=["provisioning"])
+    app.include_router(checkout_router, prefix=prefix, tags=["checkout"])
 
     # Mount dashboard sub-application
     from vinzy_engine.dashboard.router import create_dashboard_app

@@ -1,9 +1,11 @@
 """Provisioning webhook endpoints — Stripe and Polar.sh."""
 
+import json
 import logging
 import os
 
-from fastapi import APIRouter, Header, Request, Response
+from fastapi import APIRouter, Header, HTTPException, Request, Response
+from pydantic import BaseModel
 
 from vinzy_engine.common.config import get_settings
 from vinzy_engine.provisioning.schemas import ProvisioningResult
@@ -19,6 +21,70 @@ from vinzy_engine.provisioning.polar_webhook import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/webhooks", tags=["provisioning"])
+checkout_router = APIRouter(prefix="/checkout", tags=["checkout"])
+
+
+# ── Checkout session creation ──
+
+class CheckoutRequest(BaseModel):
+    product_code: str
+    tier: str
+    billing_cycle: str = "monthly"
+    success_url: str
+    cancel_url: str
+
+
+class CheckoutResponse(BaseModel):
+    url: str
+
+
+@checkout_router.post("/create", response_model=CheckoutResponse)
+async def create_checkout_session(body: CheckoutRequest):
+    """Create a Stripe Checkout session with product metadata."""
+    stripe_key = os.environ.get("VINZY_STRIPE_SECRET_KEY", "")
+    price_map_raw = os.environ.get("VINZY_STRIPE_PRICE_MAP", "{}")
+
+    if not stripe_key:
+        raise HTTPException(status_code=503, detail="Stripe not configured")
+
+    try:
+        import stripe
+    except ImportError:
+        raise HTTPException(status_code=503, detail="stripe package not installed")
+
+    try:
+        price_map = json.loads(price_map_raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid VINZY_STRIPE_PRICE_MAP")
+
+    # Lookup: e.g. "vnz_pro_monthly" → "price_..."
+    lookup = f"{body.product_code.lower()}_{body.tier.lower()}_{body.billing_cycle.lower()}"
+    price_id = price_map.get(lookup)
+    if not price_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No Stripe Price ID configured for {lookup}",
+        )
+
+    stripe.api_key = stripe_key
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription" if body.billing_cycle in ("monthly", "yearly") else "payment",
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=body.success_url,
+            cancel_url=body.cancel_url,
+            metadata={
+                "product_code": body.product_code.upper(),
+                "tier": body.tier.lower(),
+                "billing_cycle": body.billing_cycle.lower(),
+            },
+        )
+    except stripe.StripeError as e:
+        logger.error("Stripe session creation failed: %s", e)
+        raise HTTPException(status_code=502, detail="Stripe session creation failed")
+
+    return CheckoutResponse(url=session.url)
 
 
 async def _get_provisioning_service():
@@ -60,7 +126,6 @@ async def stripe_webhook(
             logger.warning("Invalid Stripe webhook signature")
             return ProvisioningResult(success=False, error="Invalid signature")
 
-    import json
     try:
         event_data = json.loads(body)
     except json.JSONDecodeError:
@@ -71,7 +136,7 @@ async def stripe_webhook(
         return ProvisioningResult(success=False, error="Unhandled event type or missing metadata")
 
     svc, db = await _get_provisioning_service()
-    async with db.get_session("licensing") as session:
+    async with db.get_session() as session:
         result = await svc.provision(session, prov_request)
 
     return result
@@ -91,7 +156,6 @@ async def polar_webhook(
             logger.warning("Invalid Polar webhook signature")
             return ProvisioningResult(success=False, error="Invalid signature")
 
-    import json
     try:
         event_data = json.loads(body)
     except json.JSONDecodeError:
@@ -102,7 +166,7 @@ async def polar_webhook(
         return ProvisioningResult(success=False, error="Unhandled event type or missing metadata")
 
     svc, db = await _get_provisioning_service()
-    async with db.get_session("licensing") as session:
+    async with db.get_session() as session:
         result = await svc.provision(session, prov_request)
 
     return result
