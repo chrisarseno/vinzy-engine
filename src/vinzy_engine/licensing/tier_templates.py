@@ -4,10 +4,10 @@ Each product has three tiers: community, pro, enterprise.
 Feature flags follow the convention: {product}.{module}.{capability}
 
 Enforcement philosophy:
-- No license key set → allow all (AGPL mode)
+- No license key set → community only
 - Key + entitled → allow
 - Key + NOT entitled → block with pricing URL
-- Server unreachable → fail-open
+- Server unreachable → community only (fail-closed for gated features)
 """
 
 from typing import Any
