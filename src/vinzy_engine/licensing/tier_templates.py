@@ -158,6 +158,8 @@ def _std_features(tier: str) -> dict[str, Any]:
         "std.brandguard.advanced": True,
         "std.taskpilot.advanced": True,
         "std.swarm.advanced": True,
+        "std.sentinel.discovery": True,
+        "std.shandorcode.metrics": True,
     }
     if tier == "pro":
         return pro
@@ -169,6 +171,10 @@ def _std_features(tier: str) -> dict[str, Any]:
         "std.brandguard.enterprise": True,
         "std.taskpilot.enterprise": True,
         "std.swarm.enterprise": True,
+        "std.sentinel.autonomous": True,
+        "std.sentinel.topology": True,
+        "std.shandorcode.ai_insights": True,
+        "std.shandorcode.boundaries": True,
     }
 
 
