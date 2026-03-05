@@ -39,6 +39,15 @@ class VinzySettings(BaseSettings):
     api_prefix: str = ""
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8000"]
 
+    # Rate limiting
+    rate_limit_enabled: bool = True
+    rate_limit_per_minute: int = 60
+    rate_limit_public_per_minute: int = 30
+
+    # IP allowlist (empty = allow all)
+    ip_allowlist_enabled: bool = False
+    ip_allowlist: list[str] = []
+
     # Licensing defaults
     default_machines_limit: int = 3
     default_license_days: int = 365

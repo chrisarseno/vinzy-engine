@@ -35,6 +35,10 @@ def app():
     from vinzy_engine.deps import reset_singletons
     reset_singletons()
 
+    # Reset rate limiter state so tests don't hit limits from previous runs
+    from vinzy_engine.common.rate_limiting import limiter
+    limiter.reset()
+
     from vinzy_engine.app import create_app
     return create_app()
 

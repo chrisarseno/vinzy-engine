@@ -1,7 +1,8 @@
 """Licensing API router."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from vinzy_engine.common.rate_limiting import limiter, _public_limit
 from vinzy_engine.common.exceptions import (
     InvalidKeyError,
     LicenseExpiredError,
@@ -256,7 +257,9 @@ async def delete_license(license_id: str, _=Depends(require_api_key)):
 # ── Validation ──
 
 @router.get("/validate", response_model=ValidationResponse, deprecated=True)
+@limiter.limit(_public_limit)
 async def validate_license_get(
+    request: Request,
     key: str = Query(...),
     fingerprint: str | None = Query(None),
 ):
@@ -278,7 +281,8 @@ async def validate_license_get(
 
 
 @router.post("/validate", response_model=ValidationResponse)
-async def validate_license(body: ValidationRequest):
+@limiter.limit(_public_limit)
+async def validate_license(request: Request, body: ValidationRequest):
     """Validate a license key via POST body (preferred — avoids key leakage in logs)."""
     svc = _get_service()
     db = _get_db()

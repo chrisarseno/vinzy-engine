@@ -1,8 +1,9 @@
 """Activation API router."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from vinzy_engine.common.exceptions import ActivationLimitError, VinzyError
+from vinzy_engine.common.rate_limiting import limiter, _public_limit
 from vinzy_engine.activation.schemas import (
     ActivateRequest,
     ActivateResponse,
@@ -26,7 +27,8 @@ def _get_db():
 
 
 @router.post("/activate", response_model=ActivateResponse)
-async def activate(body: ActivateRequest):
+@limiter.limit(_public_limit)
+async def activate(request: Request, body: ActivateRequest):
     svc = _get_service()
     db = _get_db()
     try:
@@ -65,7 +67,8 @@ async def deactivate(body: DeactivateRequest):
 
 
 @router.post("/heartbeat", response_model=HeartbeatResponse)
-async def heartbeat(body: HeartbeatRequest):
+@limiter.limit(_public_limit)
+async def heartbeat(request: Request, body: HeartbeatRequest):
     svc = _get_service()
     db = _get_db()
     try:

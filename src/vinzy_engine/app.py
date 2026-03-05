@@ -29,6 +29,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # IP allowlist (must be outermost — evaluated first)
+    if settings.ip_allowlist_enabled and settings.ip_allowlist:
+        from vinzy_engine.common.ip_filter import IPAllowlistMiddleware
+        app.add_middleware(IPAllowlistMiddleware, allowlist=settings.ip_allowlist)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -36,6 +41,15 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Rate limiting
+    if settings.rate_limit_enabled:
+        from slowapi import _rate_limit_exceeded_handler
+        from slowapi.errors import RateLimitExceeded
+        from vinzy_engine.common.rate_limiting import limiter
+
+        app.state.limiter = limiter
+        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
     @app.get("/health", response_model=HealthResponse)
     async def health():
