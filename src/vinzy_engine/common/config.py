@@ -43,10 +43,12 @@ class VinzySettings(BaseSettings):
     rate_limit_enabled: bool = True
     rate_limit_per_minute: int = 60
     rate_limit_public_per_minute: int = 30
+    rate_limit_admin_per_minute: int = 120
 
     # IP allowlist (empty = allow all)
     ip_allowlist_enabled: bool = False
     ip_allowlist: list[str] = []
+    admin_ip_allowlist: list[str] = []
 
     # Licensing defaults
     default_machines_limit: int = 3

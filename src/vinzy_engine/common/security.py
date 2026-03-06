@@ -1,9 +1,10 @@
 """API key authentication dependencies."""
 
+import ipaddress
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 
 
 @dataclass
@@ -35,6 +36,39 @@ async def require_super_admin(
     if x_vinzy_api_key != settings.super_admin_key:
         raise HTTPException(status_code=403, detail="Invalid super-admin key")
     return x_vinzy_api_key
+
+
+async def require_admin_ip(request: Request) -> str:
+    """FastAPI dependency that enforces admin IP allowlist.
+
+    When VINZY_ADMIN_IP_ALLOWLIST is set, only listed IPs can access
+    admin endpoints. Localhost is always allowed. When empty, all IPs pass.
+    """
+    from vinzy_engine.common.config import get_settings
+
+    settings = get_settings()
+    allowlist = settings.admin_ip_allowlist
+    if not allowlist:
+        return ""  # No restriction
+
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    try:
+        addr = ipaddress.ip_address(client_ip)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Invalid client IP")
+
+    # Always allow localhost
+    if addr in ipaddress.ip_network("127.0.0.1/32") or addr in ipaddress.ip_network("::1/128"):
+        return client_ip
+
+    for entry in allowlist:
+        try:
+            if addr in ipaddress.ip_network(entry, strict=False):
+                return client_ip
+        except ValueError:
+            continue
+
+    raise HTTPException(status_code=403, detail=f"IP {client_ip} not in admin allowlist")
 
 
 async def resolve_tenant(

@@ -18,6 +18,12 @@ def _public_limit() -> str:
     return f"{settings.rate_limit_public_per_minute}/minute"
 
 
+def _admin_limit() -> str:
+    """Limit for authenticated admin endpoints."""
+    settings = get_settings()
+    return f"{settings.rate_limit_admin_per_minute}/minute"
+
+
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[_default_limit],
