@@ -2,10 +2,11 @@
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
-from vinzy_engine.common.security import require_api_key
+from vinzy_engine.common.security import require_api_key, require_admin_ip
+from vinzy_engine.common.rate_limiting import limiter, _admin_limit
 from vinzy_engine.webhooks.schemas import (
     WebhookDeliveryResponse,
     WebhookEndpointCreate,
@@ -61,9 +62,12 @@ def _delivery_to_response(d) -> WebhookDeliveryResponse:
 
 
 @router.post("/webhooks", response_model=WebhookEndpointResponse, status_code=201)
+@limiter.limit(_admin_limit)
 async def create_webhook_endpoint(
+    request: Request,
     body: WebhookEndpointCreate,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     # Validate event types
     for et in body.event_types:
@@ -89,9 +93,12 @@ async def create_webhook_endpoint(
 
 
 @router.get("/webhooks", response_model=list[WebhookEndpointResponse])
+@limiter.limit(_admin_limit)
 async def list_webhook_endpoints(
+    request: Request,
     status: str | None = Query(None),
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -101,9 +108,12 @@ async def list_webhook_endpoints(
 
 
 @router.get("/webhooks/{endpoint_id}", response_model=WebhookEndpointResponse)
+@limiter.limit(_admin_limit)
 async def get_webhook_endpoint(
+    request: Request,
     endpoint_id: str,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -115,10 +125,13 @@ async def get_webhook_endpoint(
 
 
 @router.patch("/webhooks/{endpoint_id}", response_model=WebhookEndpointResponse)
+@limiter.limit(_admin_limit)
 async def update_webhook_endpoint(
+    request: Request,
     endpoint_id: str,
     body: WebhookEndpointUpdate,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     # Validate event types if provided
     if body.event_types is not None:
@@ -140,9 +153,12 @@ async def update_webhook_endpoint(
 
 
 @router.delete("/webhooks/{endpoint_id}", status_code=204)
+@limiter.limit(_admin_limit)
 async def delete_webhook_endpoint(
+    request: Request,
     endpoint_id: str,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -157,13 +173,16 @@ async def delete_webhook_endpoint(
     "/webhooks/{endpoint_id}/deliveries",
     response_model=list[WebhookDeliveryResponse],
 )
+@limiter.limit(_admin_limit)
 async def list_endpoint_deliveries(
+    request: Request,
     endpoint_id: str,
     event_type: str | None = Query(None),
     status: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -184,10 +203,13 @@ async def list_endpoint_deliveries(
 
 
 @router.post("/webhooks/{endpoint_id}/test", status_code=202)
+@limiter.limit(_admin_limit)
 async def test_webhook_endpoint(
+    request: Request,
     endpoint_id: str,
     body: WebhookTestRequest | None = None,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -228,9 +250,12 @@ async def test_webhook_endpoint(
     "/webhooks/deliveries/{delivery_id}/retry",
     response_model=WebhookDeliveryResponse,
 )
+@limiter.limit(_admin_limit)
 async def retry_webhook_delivery(
+    request: Request,
     delivery_id: str,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()

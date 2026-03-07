@@ -1,8 +1,9 @@
 """Audit chain API router."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
-from vinzy_engine.common.security import require_api_key
+from vinzy_engine.common.security import require_api_key, require_admin_ip
+from vinzy_engine.common.rate_limiting import limiter, _admin_limit
 from vinzy_engine.audit.schemas import AuditEventResponse, AuditChainVerification
 
 router = APIRouter()
@@ -19,12 +20,15 @@ def _get_db():
 
 
 @router.get("/audit/{license_id}", response_model=list[AuditEventResponse])
+@limiter.limit(_admin_limit)
 async def get_audit_events(
+    request: Request,
     license_id: str,
     event_type: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -50,8 +54,11 @@ async def get_audit_events(
 
 
 @router.get("/audit/{license_id}/verify", response_model=AuditChainVerification)
+@limiter.limit(_admin_limit)
 async def verify_audit_chain(
+    request: Request,
     license_id: str, _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()

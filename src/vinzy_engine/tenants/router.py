@@ -1,8 +1,9 @@
 """Tenant API router — requires super-admin authentication."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from vinzy_engine.common.security import require_super_admin
+from vinzy_engine.common.security import require_super_admin, require_admin_ip
+from vinzy_engine.common.rate_limiting import limiter, _admin_limit
 from vinzy_engine.tenants.schemas import (
     TenantCreate,
     TenantCreateResponse,
@@ -24,7 +25,8 @@ def _get_db():
 
 
 @router.post("", response_model=TenantCreateResponse, status_code=201)
-async def create_tenant(body: TenantCreate, _=Depends(require_super_admin)):
+@limiter.limit(_admin_limit)
+async def create_tenant(request: Request, body: TenantCreate, _=Depends(require_super_admin), __=Depends(require_admin_ip)):
     svc = _get_service()
     db = _get_db()
     async with db.get_session() as session:
@@ -47,7 +49,8 @@ async def create_tenant(body: TenantCreate, _=Depends(require_super_admin)):
 
 
 @router.get("", response_model=list[TenantResponse])
-async def list_tenants(_=Depends(require_super_admin)):
+@limiter.limit(_admin_limit)
+async def list_tenants(request: Request, _=Depends(require_super_admin), __=Depends(require_admin_ip)):
     svc = _get_service()
     db = _get_db()
     async with db.get_session() as session:
@@ -64,7 +67,8 @@ async def list_tenants(_=Depends(require_super_admin)):
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
-async def get_tenant(tenant_id: str, _=Depends(require_super_admin)):
+@limiter.limit(_admin_limit)
+async def get_tenant(request: Request, tenant_id: str, _=Depends(require_super_admin), __=Depends(require_admin_ip)):
     svc = _get_service()
     db = _get_db()
     async with db.get_session() as session:
@@ -80,8 +84,9 @@ async def get_tenant(tenant_id: str, _=Depends(require_super_admin)):
 
 
 @router.patch("/{tenant_id}", response_model=TenantResponse)
+@limiter.limit(_admin_limit)
 async def update_tenant(
-    tenant_id: str, body: TenantUpdate, _=Depends(require_super_admin)
+    request: Request, tenant_id: str, body: TenantUpdate, _=Depends(require_super_admin), __=Depends(require_admin_ip)
 ):
     svc = _get_service()
     db = _get_db()
@@ -100,7 +105,8 @@ async def update_tenant(
 
 
 @router.delete("/{tenant_id}", status_code=204)
-async def delete_tenant(tenant_id: str, _=Depends(require_super_admin)):
+@limiter.limit(_admin_limit)
+async def delete_tenant(request: Request, tenant_id: str, _=Depends(require_super_admin), __=Depends(require_admin_ip)):
     svc = _get_service()
     db = _get_db()
     async with db.get_session() as session:

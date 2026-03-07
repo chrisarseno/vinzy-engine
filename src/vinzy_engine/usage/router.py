@@ -1,9 +1,10 @@
 """Usage API router."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from vinzy_engine.common.exceptions import VinzyError
-from vinzy_engine.common.security import require_api_key
+from vinzy_engine.common.security import require_api_key, require_admin_ip
+from vinzy_engine.common.rate_limiting import limiter, _public_limit, _admin_limit
 from vinzy_engine.usage.schemas import UsageRecordRequest, UsageRecordResponse, UsageSummary
 
 router = APIRouter()
@@ -20,7 +21,8 @@ def _get_db():
 
 
 @router.post("/usage/record", response_model=UsageRecordResponse)
-async def record_usage(body: UsageRecordRequest):
+@limiter.limit(_public_limit)
+async def record_usage(request: Request, body: UsageRecordRequest):
     svc = _get_service()
     db = _get_db()
     try:
@@ -41,7 +43,8 @@ async def record_usage(body: UsageRecordRequest):
 
 
 @router.get("/usage/{license_id}", response_model=list[UsageSummary])
-async def get_usage(license_id: str, _=Depends(require_api_key)):
+@limiter.limit(_admin_limit)
+async def get_usage(request: Request, license_id: str, _=Depends(require_api_key), __=Depends(require_admin_ip)):
     svc = _get_service()
     db = _get_db()
     async with db.get_session() as session:
@@ -50,7 +53,8 @@ async def get_usage(license_id: str, _=Depends(require_api_key)):
 
 
 @router.get("/usage/agents/{license_id}", response_model=dict[str, dict[str, float]])
-async def get_agent_usage(license_id: str, _=Depends(require_api_key)):
+@limiter.limit(_admin_limit)
+async def get_agent_usage(request: Request, license_id: str, _=Depends(require_api_key), __=Depends(require_admin_ip)):
     svc = _get_service()
     db = _get_db()
     async with db.get_session() as session:

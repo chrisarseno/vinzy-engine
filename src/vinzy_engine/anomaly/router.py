@@ -1,8 +1,9 @@
 """Anomaly detection API router."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from vinzy_engine.common.security import require_api_key
+from vinzy_engine.common.security import require_api_key, require_admin_ip
+from vinzy_engine.common.rate_limiting import limiter, _admin_limit
 from vinzy_engine.anomaly.schemas import AnomalyResolveRequest, AnomalyResponse
 
 router = APIRouter()
@@ -19,11 +20,14 @@ def _get_db():
 
 
 @router.get("/anomalies/{license_id}", response_model=list[AnomalyResponse])
+@limiter.limit(_admin_limit)
 async def get_anomalies(
+    request: Request,
     license_id: str,
     resolved: bool | None = Query(None),
     severity: str | None = Query(None),
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
@@ -53,10 +57,13 @@ async def get_anomalies(
 
 
 @router.post("/anomalies/{anomaly_id}/resolve", response_model=AnomalyResponse)
+@limiter.limit(_admin_limit)
 async def resolve_anomaly(
+    request: Request,
     anomaly_id: str,
     body: AnomalyResolveRequest,
     _=Depends(require_api_key),
+    __=Depends(require_admin_ip),
 ):
     svc = _get_service()
     db = _get_db()
