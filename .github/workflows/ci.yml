@@ -28,3 +28,7 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -q --tb=short
+
+      - name: Verify migrations
+        run: |
+          PYTHONPATH=src python -m alembic -x sqlalchemy.url=sqlite:///tmp_ci.db upgrade head
