@@ -21,12 +21,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 readme = "README.md"
-
-[project.urls]
-Homepage = "https://github.com/chrisarseno/vinzy-engine"
-Repository = "https://github.com/chrisarseno/vinzy-engine"
-Issues = "https://github.com/chrisarseno/vinzy-engine/issues"
-
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
@@ -54,6 +48,11 @@ dev = [
     "ruff>=0.6.0",
     "black>=24.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/chrisarseno/vinzy-engine"
+Repository = "https://github.com/chrisarseno/vinzy-engine"
+Issues = "https://github.com/chrisarseno/vinzy-engine/issues"
 
 [project.scripts]
 vinzy = "vinzy_engine.cli:app"
